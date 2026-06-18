@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Prompt Arena"/>
+<meta name="theme-color" content="#080C14"/>
+<title>Prompt Arena</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{min-height:100vh;background:linear-gradient(160deg,#080C14 0%,#0D1525 100%);color:#E2E8F0;font-family:'Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+  @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+  .spinner{width:44px;height:44px;border:3px solid #1E293B;border-top:3px solid #22D3EE;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 18px}
+  .screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px 16px}
+  .screen.active{display:flex}
+  .card{background:rgba(15,23,42,.85);border:1px solid #1E3A5F;border-radius:18px;width:100%;max-width:560px;padding:32px 24px}
+  .grad-text{background:linear-gradient(90deg,#7C3AED,#22D3EE);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .btn{border:none;border-radius:12px;padding:14px 20px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;width:100%;letter-spacing:.03em;transition:opacity .15s,transform .1s}
+  .btn:active{transform:scale(.97);opacity:.9}
+  .btn-primary{background:linear-gradient(135deg,#7C3AED,#2563EB);box-shadow:0 0 20px #7C3AED44}
+  .btn-green{background:linear-gradient(135deg,#059669,#0891B2)}
+  .btn-ghost{background:rgba(30,58,95,.8);border:1px solid #1E3A5F;color:#E2E8F0}
+  .hud{background:rgba(15,23,42,.97);border-bottom:1px solid #1E3A5F;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:20;flex-wrap:wrap}
+  .xp-track{height:7px;background:#1E293B;border-radius:999px;overflow:hidden;flex:1;min-width:100px;max-width:200px}
+  .xp-fill{height:100%;background:linear-gradient(90deg,#7C3AED,#22D3EE);border-radius:999px;transition:width .7s ease}
+  .level-badge{background:linear-gradient(135deg,#1E3A8A,#7C3AED);border-radius:7px;padding:3px 10px;font-size:11px;font-weight:700;text-transform:uppercase;white-space:nowrap}
+  .rank{font-size:15px;font-weight:800;color:#A78BFA;white-space:nowrap}
+  .streak{display:flex;align-items:center;gap:5px;border-radius:7px;padding:4px 9px;font-size:12px;font-weight:700;border:1px solid #1E293B;color:#64748B;background:rgba(100,116,139,.1)}
+  .streak.hot{color:#FCD34D;background:rgba(245,158,11,.15);border-color:#F59E0B44}
+  .cat-badge{border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;text-transform:uppercase}
+  .pip{width:7px;height:7px;border-radius:50%;background:#1E293B;display:inline-block;margin:0 2px}
+  .pip.on{background:#22D3EE;box-shadow:0 0 5px #22D3EE88}
+  .label{font-size:10px;font-weight:700;color:#475569;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+  .context-box{background:#0F172A;border:1px solid #1E293B;border-radius:8px;padding:10px 13px;font-size:13px;color:#94A3B8;line-height:1.6;margin-bottom:12px}
+  .hint-box{background:rgba(245,158,11,.06);border:1px solid #F59E0B44;border-radius:8px;padding:10px 13px;font-size:13px;color:#FCD34D;line-height:1.6;margin-top:9px}
+  .hint-btn{background:none;border:1px solid #1E3A5F;color:#60A5FA;border-radius:6px;padding:5px 11px;font-size:12px;cursor:pointer}
+  textarea{width:100%;min-height:120px;background:#0A0F1A;border:1px solid #1E3A5F;border-radius:12px;padding:13px;font-size:14px;font-family:'Courier New',monospace;color:#E2E8F0;resize:vertical;outline:none;line-height:1.7;transition:border-color .2s}
+  textarea:focus{border-color:#22D3EE;box-shadow:0 0 0 3px #22D3EE18}
+  .grade-ring{width:88px;height:88px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:900;margin:0 auto 10px;animation:pop .5s ease;border:4px solid}
+  .feedback-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+  .fb-card{border-radius:9px;padding:11px}
+  .fb-good{background:rgba(5,150,105,.08);border:1px solid #05966944}
+  .fb-bad{background:rgba(239,68,68,.08);border:1px solid #EF444444}
+  .lesson-box{background:rgba(124,58,237,.1);border:1px solid #7C3AED44;border-radius:9px;padding:11px 15px;margin-bottom:12px}
+  .better-box{background:#0A0F1A;border:1px solid #22D3EE44;border-radius:9px;padding:13px;font-family:'Courier New',monospace;font-size:12px;color:#67E8F9;line-height:1.7;white-space:pre-wrap;word-break:break-word;margin-top:8px}
+  .score-bar{height:8px;background:#1E293B;border-radius:999px;overflow:hidden;margin-bottom:7px}
+  .score-fill{height:100%;border-radius:999px;transition:width 1s ease}
+  .xp-badge{background:rgba(124,58,237,.15);border:1px solid #7C3AED44;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:700;color:#A78BFA;display:inline-block}
+  .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:0}
+  .toast{position:fixed;top:65px;right:16px;background:linear-gradient(135deg,#7C3AED,#22D3EE);border-radius:10px;padding:9px 16px;font-weight:800;font-size:14px;z-index:100;box-shadow:0 4px 20px #7C3AED55;animation:fadeDown .3s ease;display:none}
+  .error-box{background:rgba(239,68,68,.08);border:1px solid #EF444466;border-radius:9px;padding:11px;color:#F87171;font-size:12px;word-break:break-all;margin-top:10px}
+  .main-content{flex:1;display:flex;flex-direction:column;align-items:center;padding:22px 14px;gap:16px}
+  .gear{background:none;border:1px solid #1E293B;border-radius:6px;padding:4px 8px;font-size:11px;color:#475569;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- BOOT -->
+<div id="screen-boot" class="screen active">
+  <div class="spinner"></div>
+</div>
+
+<!-- INTRO -->
+<div id="screen-intro" class="screen" style="min-height:unset;padding:24px 16px">
+  <div style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:500px;text-align:center;padding:40px 24px;background:rgba(15,23,42,.85);border:1px solid #1E3A5F;border-radius:20px">
+    <div style="font-size:50px;margin-bottom:4px">⚡</div>
+    <div class="grad-text" style="font-size:36px;font-weight:900;letter-spacing:-.03em">PROMPT ARENA</div>
+    <div style="font-size:10px;font-weight:700;color:#7C3AED;letter-spacing:.12em;margin:4px 0 16px">PROMPT ENGINEERING TRAINING SYSTEM</div>
+    <p style="color:#94A3B8;font-size:14px;line-height:1.7;margin-bottom:22px">Get a real-world AI task. Write the best prompt you can. Claude grades it, shows what worked and failed, then reveals the optimized version. Difficulty scales as you level up.</p>
+    <div id="welcome-back" style="display:none;background:rgba(124,58,237,.1);border:1px solid #7C3AED44;border-radius:9px;padding:8px 14px;margin-bottom:14px;font-size:13px;color:#A78BFA"></div>
+    <button class="btn btn-primary" onclick="startChallenge()" id="start-btn">START TRAINING →</button>
+    <div id="intro-error" class="error-box" style="display:none"></div>
+  </div>
+</div>
+
+<!-- HUD (shown during challenge/grading/results) -->
+<div id="hud" style="display:none">
+  <div class="hud">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="level-badge" id="hud-level">LVL 1</span>
+      <span class="rank" id="hud-rank">Rookie</span>
+    </div>
+    <div style="display:flex;flex-direction:column;flex:1;min-width:100px;max-width:180px">
+      <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+      <div style="font-size:10px;color:#64748B;margin-top:2px;text-align:center" id="xp-label">0/250 XP</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="streak" id="streak-badge">🔥 0</div>
+      <button class="gear" onclick="resetProgress()" title="Reset progress">⚙</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="screen-loading" class="screen" style="min-height:unset;padding:70px 24px">
+  <div class="spinner"></div>
+  <div style="font-size:15px;color:#94A3B8;font-weight:600" id="loading-msg">Generating challenge...</div>
+</div>
+
+<!-- CHALLENGE -->
+<div id="screen-challenge" style="display:none">
+  <div class="main-content">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:13px 18px;border-bottom:1px solid #1E293B;display:flex;justify-content:space-between;align-items:center">
+        <span class="cat-badge" id="cat-badge">Category</span>
+        <div style="display:flex;align-items:center;gap:2px" id="diff-pips"></div>
+      </div>
+      <div style="padding:18px">
+        <div class="label">🎯 Your Challenge</div>
+        <div style="font-size:16px;font-weight:700;line-height:1.5;margin-bottom:12px" id="task-text"></div>
+        <div class="context-box" id="context-box" style="display:none"></div>
+        <button class="hint-btn" onclick="toggleHint()" id="hint-btn">💡 Show Hint</button>
+        <div class="hint-box" id="hint-box" style="display:none"></div>
+      </div>
+    </div>
+
+    <div style="width:100%;max-width:560px">
+      <div class="label">✍️ Write Your Prompt</div>
+      <textarea id="prompt-input" placeholder="Write the prompt you would send to an AI to accomplish the task above..."></textarea>
+      <div style="font-size:10px;color:#475569;text-align:right;margin-top:3px" id="char-count">0 chars</div>
+      <div id="challenge-error" class="error-box" style="display:none"></div>
+      <button class="btn btn-green" style="margin-top:8px" onclick="submitPrompt()" id="submit-btn">SUBMIT FOR GRADING ➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="screen-results" style="display:none">
+  <div class="main-content">
+    <div class="card">
+      <div style="text-align:center;margin-bottom:18px">
+        <div class="grade-ring" id="grade-ring"></div>
+        <div style="font-size:24px;font-weight:900;margin-bottom:5px" id="score-display"></div>
+        <div class="score-bar"><div class="score-fill" id="score-fill"></div></div>
+        <span class="xp-badge" id="xp-earned"></span>
+      </div>
+
+      <div class="feedback-grid">
+        <div class="fb-card fb-good">
+          <div class="label" style="color:#10B981">✓ What Worked</div>
+          <div style="font-size:12px;color:#94A3B8;line-height:1.6" id="what-worked"></div>
+        </div>
+        <div class="fb-card fb-bad">
+          <div class="label" style="color:#F87171">✗ What Failed</div>
+          <div style="font-size:12px;color:#94A3B8;line-height:1.6" id="what-failed"></div>
+        </div>
+      </div>
+
+      <div class="lesson-box">
+        <div class="label" style="color:#A78BFA">🧠 Key Lesson</div>
+        <div style="font-size:13px;color:#C4B5FD;line-height:1.6" id="key-lesson"></div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <div class="label" style="margin:0">⚡ Optimized Prompt</div>
+          <div style="display:flex;gap:5px">
+            <button class="hint-btn" onclick="toggleBetter()" id="better-btn">Reveal</button>
+            <button class="hint-btn" onclick="copyBetter()" id="copy-btn" style="display:none;border-color:#22D3EE44;color:#22D3EE">Copy</button>
+          </div>
+        </div>
+        <div class="better-box" id="better-box" style="display:none"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-green" onclick="startChallenge()">NEXT →</button>
+        <button class="btn btn-ghost" onclick="retryChallenge()">↩ Retry</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG — your son replaces this with the real key ──
+const API_KEY = "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
+";
+
+// ── GAME STATE ──
+const XP_PER_LEVEL = 250;
+const RANKS = ["Rookie","Apprentice","Craftsman","Specialist","Tactician","Strategist","Expert","Architect","Master","Grandmaster"];
+const GRADE_COLORS = {
+  A:{bg:"#064E3B",border:"#10B981",text:"#34D399"},
+  B:{bg:"#1E3A5F",border:"#3B82F6",text:"#60A5FA"},
+  C:{bg:"#3B2F1E",border:"#F59E0B",text:"#FCD34D"},
+  D:{bg:"#3B1F1E",border:"#F97316",text:"#FB923C"},
+  F:{bg:"#3B1E1E",border:"#EF4444",text:"#F87171"},
+};
+const CAT_COLORS = {
+  "Creative Writing":"#8B5CF6","Data Analysis":"#22D3EE","Code Generation":"#10B981",
+  "Summarization":"#F59E0B","Role Play":"#EC4899","Classification":"#6366F1",
+  "Extraction":"#14B8A6","Reasoning":"#F97316","Formatting":"#A78BFA",
+};
+
+let state = {level:1, xp:0, streak:0};
+let currentChallenge = null;
+let betterPromptText = "";
+let hintVisible = false;
+let betterVisible = false;
+
+function loadState() {
+  try { const s = localStorage.getItem("pa_state"); if(s) state = JSON.parse(s); } catch{}
+}
+function saveState() {
+  try { localStorage.setItem("pa_state", JSON.stringify(state)); } catch{}
+}
+function resetProgress() {
+  if (!confirm("Reset all progress? This cannot be undone.")) return;
+  state = {level:1,xp:0,streak:0};
+  saveState();
+  showScreen("intro");
+  updateIntro();
+}
+
+function rank() { return RANKS[Math.min(state.level-1,9)]; }
+function diff() { return Math.min(Math.ceil(state.level/1.5),7); }
+
+function updateHUD() {
+  document.getElementById("hud-level").textContent = "LVL " + state.level;
+  document.getElementById("hud-rank").textContent = rank();
+  const pct = ((state.xp % XP_PER_LEVEL) / XP_PER_LEVEL) * 100;
+  document.getElementById("xp-fill").style.width = pct + "%";
+  document.getElementById("xp-label").textContent = (state.xp % XP_PER_LEVEL) + "/" + XP_PER_LEVEL + " XP";
+  const sb = document.getElementById("streak-badge");
+  sb.textContent = "🔥 " + state.streak;
+  sb.className = "streak" + (state.streak > 0 ? " hot" : "");
+}
+
+function updateIntro() {
+  const wb = document.getElementById("welcome-back");
+  if (state.level > 1) {
+    wb.style.display = "block";
+    wb.textContent = "Welcome back, " + rank() + "! Level " + state.level + " · " + state.xp + " XP total";
+    document.getElementById("start-btn").textContent = "CONTINUE TRAINING →";
+  }
+}
+
+function showScreen(name) {
+  ["boot","intro","loading","challenge","results"].forEach(s => {
+    const el = document.getElementById("screen-"+s);
+    if (el) el.style.display = "none";
+  });
+  document.getElementById("hud").style.display = ["challenge","results","loading"].includes(name) ? "block" : "none";
+  const target = document.getElementById("screen-"+name);
+  if (target) {
+    target.style.display = name === "intro" ? "flex" : "block";
+    if (name === "loading" || name === "boot") target.style.display = "flex";
+  }
+  if (name !== "intro" && name !== "boot") updateHUD();
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  setTimeout(()=>t.style.display="none", 3000);
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.style.display = "block";
+}
+function hideError(id) { document.getElementById(id).style.display = "none"; }
+
+async function callClaude(prompt) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": API_KEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(()=>"");
+    throw new Error("API " + res.status + ": " + t.slice(0,200));
+  }
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const raw = (data.content||[]).find(b=>b.type==="text")?.text||"";
+  const clean = raw.replace(/^```(?:json)?\s*/i,"").replace(/\s*```\s*$/,"").trim();
+  return JSON.parse(clean);
+}
+
+async function startChallenge() {
+  showScreen("loading");
+  document.getElementById("loading-msg").textContent = "Generating your challenge...";
+  hideError("intro-error");
+  hintVisible = false; betterVisible = false;
+  document.getElementById("prompt-input").value = "";
+  document.getElementById("char-count").textContent = "0 chars";
+
+  try {
+    const d = diff();
+    const data = await callClaude(
+      "You are a prompt engineering trainer. Return ONLY a raw JSON object — no markdown fences, no explanation.\n" +
+      "Fields: task (string), category (one of: Creative Writing, Data Analysis, Code Generation, Summarization, Role Play, Classification, Extraction, Reasoning, Formatting), difficulty_label (string), context (string), hint (string).\n\n" +
+      "Generate a prompt engineering challenge at difficulty " + d + " out of 7. Level 1 is very simple, level 7 is advanced chain-of-thought. Player level: " + state.level + ". Return only the JSON."
+    );
+    currentChallenge = data;
+    renderChallenge(data);
+    showScreen("challenge");
+  } catch(e) {
+    showScreen("intro");
+    showError("intro-error", String(e));
+  }
+}
+
+function renderChallenge(data) {
+  const cat = data.category || "General";
+  const color = CAT_COLORS[cat] || "#64748B";
+  const badge = document.getElementById("cat-badge");
+  badge.textContent = cat;
+  badge.style.background = color + "22";
+  badge.style.border = "1px solid " + color + "55";
+  badge.style.color = color;
+
+  const pips = document.getElementById("diff-pips");
+  pips.innerHTML = "";
+  const d = diff();
+  for (let i=0;i<7;i++) {
+    const p = document.createElement("div");
+    p.className = "pip" + (i<d?" on":"");
+    pips.appendChild(p);
+  }
+  const dlabel = document.createElement("span");
+  dlabel.style.cssText = "font-size:10px;color:#475569;margin-left:5px";
+  dlabel.textContent = data.difficulty_label||"";
+  pips.appendChild(dlabel);
+
+  document.getElementById("task-text").textContent = data.task||"";
+
+  const ctx = document.getElementById("context-box");
+  if (data.context) { ctx.textContent = "💡 " + data.context; ctx.style.display="block"; }
+  else ctx.style.display="none";
+
+  document.getElementById("hint-box").textContent = "🔍 " + (data.hint||"");
+  document.getElementById("hint-box").style.display = "none";
+  document.getElementById("hint-btn").textContent = "💡 Show Hint";
+  document.getElementById("hint-btn").style.display = data.hint ? "inline-block" : "none";
+  hideError("challenge-error");
+}
+
+function toggleHint() {
+  hintVisible = !hintVisible;
+  document.getElementById("hint-box").style.display = hintVisible ? "block" : "none";
+  document.getElementById("hint-btn").textContent = hintVisible ? "Hide Hint" : "💡 Show Hint";
+}
+
+document.getElementById("prompt-input").addEventListener("input", function() {
+  document.getElementById("char-count").textContent = this.value.length + " chars";
+});
+
+async function submitPrompt() {
+  const p = document.getElementById("prompt-input").value.trim();
+  if (p.length < 5) return;
+  showScreen("loading");
+  document.getElementById("loading-msg").textContent = "Grading your prompt...";
+  hideError("challenge-error");
+
+  try {
+    const data = await callClaude(
+      "You are a prompt engineering coach. Return ONLY a raw JSON object — no markdown, no explanation.\n" +
+      "Fields: score (integer 0-100), grade (A/B/C/D/F), what_worked (string), what_failed (string), better_prompt (string), key_lesson (string).\n\n" +
+      "Task: " + currentChallenge.task + "\nUser prompt: " + p + "\nEvaluate and return only the JSON."
+    );
+
+    const earned = Math.round((data.score||0)*2.5*(1+Math.min(state.streak,5)*0.15));
+    const newXp = state.xp + earned;
+    const newLevel = Math.floor(newXp/XP_PER_LEVEL)+1;
+    const leveledUp = newLevel > state.level;
+    const newStreak = (data.score||0)>=70 ? state.streak+1 : 0;
+
+    state.xp = newXp;
+    state.level = newLevel;
+    state.streak = newStreak;
+    saveState();
+
+    betterPromptText = data.better_prompt||"";
+    renderResults(data, earned, leveledUp);
+    showScreen("results");
+    if (leveledUp) showToast("⚡ LEVEL UP! " + rank() + "!");
+  } catch(e) {
+    showScreen("challenge");
+    showError("challenge-error", String(e));
+  }
+}
+
+function renderResults(data, earned, leveledUp) {
+  const g = data.grade||"F";
+  const gc = GRADE_COLORS[g]||GRADE_COLORS.F;
+  const ring = document.getElementById("grade-ring");
+  ring.textContent = g;
+  ring.style.background = gc.bg;
+  ring.style.borderColor = gc.border;
+  ring.style.color = gc.text;
+  ring.style.boxShadow = "0 0 26px " + gc.border + "66";
+
+  document.getElementById("score-display").textContent = (data.score||0) + " / 100";
+
+  const sf = document.getElementById("score-fill");
+  const sc = data.score||0;
+  sf.style.width = sc + "%";
+  sf.style.background = sc>=80?"linear-gradient(90deg,#059669,#10B981)":sc>=60?"linear-gradient(90deg,#1D4ED8,#3B82F6)":"linear-gradient(90deg,#B91C1C,#EF4444)";
+
+  const streak = state.streak;
+  document.getElementById("xp-earned").textContent = "+" + earned + " XP" + (streak>1?" · 🔥 "+streak+"x Streak!":"");
+  document.getElementById("what-worked").textContent = data.what_worked||"";
+  document.getElementById("what-failed").textContent = data.what_failed||"";
+  document.getElementById("key-lesson").textContent = data.key_lesson||"";
+
+  document.getElementById("better-box").style.display = "none";
+  document.getElementById("better-btn").textContent = "Reveal";
+  document.getElementById("copy-btn").style.display = "none";
+  betterVisible = false;
+  updateHUD();
+}
+
+function toggleBetter() {
+  betterVisible = !betterVisible;
+  const box = document.getElementById("better-box");
+  box.textContent = betterPromptText;
+  box.style.display = betterVisible?"block":"none";
+  document.getElementById("better-btn").textContent = betterVisible?"Hide":"Reveal";
+  document.getElementById("copy-btn").style.display = betterVisible?"inline-block":"none";
+}
+
+function copyBetter() {
+  navigator.clipboard.writeText(betterPromptText).then(()=>{
+    const btn = document.getElementById("copy-btn");
+    btn.textContent = "Copied!";
+    setTimeout(()=>btn.textContent="Copy",2000);
+  });
+}
+
+function retryChallenge() {
+  renderChallenge(currentChallenge);
+  showScreen("challenge");
+}
+
+// ── BOOT ──
+window.addEventListener("load", () => {
+  loadState();
+  updateIntro();
+  setTimeout(()=>showScreen("intro"), 500);
+});
+</script>
+</body>
+</html>
