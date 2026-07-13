@@ -73,6 +73,7 @@
     <p style="color:#94A3B8;font-size:14px;line-height:1.7;margin-bottom:22px">Get a real-world AI task. Write the best prompt you can. Claude grades it, shows what worked and failed, then reveals the optimized version. Difficulty scales as you level up.</p>
     <div id="welcome-back" style="display:none;background:rgba(124,58,237,.1);border:1px solid #7C3AED44;border-radius:9px;padding:8px 14px;margin-bottom:14px;font-size:13px;color:#A78BFA"></div>
     <button class="btn btn-primary" onclick="startChallenge()" id="start-btn">START TRAINING →</button>
+    <button class="hint-btn" style="margin-top:12px" onclick="setApiKey()" id="api-key-btn">🔑 Set API Key</button>
     <div id="intro-error" class="error-box" style="display:none"></div>
   </div>
 </div>
@@ -178,9 +179,28 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ── CONFIG — your son replaces this with the real key ──
-const API_KEY = "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
-";
+// ── CONFIG ──
+// No API key is bundled with this file. Each player enters their own key,
+// which is stored only in their browser's localStorage — never committed
+// to source control or sent anywhere but api.anthropic.com.
+function getApiKey() {
+  return localStorage.getItem("pa_api_key") || "";
+}
+function setApiKey() {
+  const existing = getApiKey();
+  const key = window.prompt(
+    "Enter your Anthropic API key (starts with sk-ant-...). It is stored only in this browser's local storage.",
+    existing
+  );
+  if (key === null) return;
+  const trimmed = key.trim();
+  if (trimmed) {
+    localStorage.setItem("pa_api_key", trimmed);
+    showToast("🔑 API key saved");
+  } else {
+    localStorage.removeItem("pa_api_key");
+  }
+}
 
 // ── GAME STATE ──
 const XP_PER_LEVEL = 250;
@@ -270,11 +290,16 @@ function showError(id, msg) {
 function hideError(id) { document.getElementById(id).style.display = "none"; }
 
 async function callClaude(prompt) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    setApiKey();
+    throw new Error("No API key set. Click 🔑 Set API Key and try again.");
+  }
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": API_KEY,
+      "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
       "anthropic-dangerous-direct-browser-access": "true",
     },
